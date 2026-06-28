@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CGO-FULI ADMIN · C-60</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#f0fdfa; --card:#ffffff; --ink:#0f766e; --ink2:#134e4a;
+    --mint:#14b8a6; --mint-d:#0d9488; --line:rgba(13,148,136,.18);
+    --muted:#5b8a85; --shadow:0 8px 28px rgba(15,118,110,.10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{font-family:'Noto Sans KR',system-ui,sans-serif;background:radial-gradient(circle at 50% 0%,#ffffff,#f0fdfa 60%,#ecfdf5);color:var(--ink2);min-height:100vh;}
+  .wrap{max-width:520px;margin:0 auto;padding:22px 16px 60px;}
+  /* 로그인 */
+  #login{position:fixed;inset:0;background:radial-gradient(circle at 50% 35%,#ffffff,#ecfdf5);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;z-index:100;}
+  #login .logo{font-size:40px;}
+  #login h1{font-size:20px;font-weight:900;color:var(--ink);letter-spacing:-.02em;}
+  #login p{font-size:12px;color:var(--muted);}
+  #login input{width:min(280px,80vw);padding:14px 16px;border:1.5px solid var(--line);border-radius:13px;font-size:15px;text-align:center;outline:none;}
+  #login input:focus{border-color:var(--mint);}
+  #login button{width:min(280px,80vw);padding:14px;background:linear-gradient(135deg,var(--mint-d),var(--mint));border:none;border-radius:13px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;}
+  #loginMsg{font-size:12px;color:#dc2626;min-height:16px;}
+  /* 헤더 */
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+  .brand{font-size:16px;font-weight:900;color:var(--ink);letter-spacing:-.01em;}
+  .brand small{display:block;font-size:10px;font-weight:700;color:var(--mint);letter-spacing:.08em;margin-top:2px;}
+  .hero{background:linear-gradient(135deg,var(--ink),var(--mint-d));border-radius:20px;padding:22px;color:#fff;margin-bottom:18px;box-shadow:var(--shadow);}
+  .hero .lbl{font-size:11px;opacity:.85;font-weight:700;letter-spacing:.06em;}
+  .hero .big{font-size:40px;font-weight:900;line-height:1.05;margin:6px 0 2px;}
+  .hero .sub{font-size:12px;opacity:.9;}
+  /* 섹션 카드 */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+  .scard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 14px;cursor:pointer;transition:transform .12s,box-shadow .12s;box-shadow:0 2px 8px rgba(15,118,110,.05);}
+  .scard:active{transform:scale(.97);}
+  .scard .ico{font-size:26px;}
+  .scard .ttl{font-size:14px;font-weight:800;color:var(--ink);margin-top:8px;}
+  .scard .meta{font-size:11px;color:var(--muted);margin-top:3px;}
+  .scard .arrow{font-size:11px;color:var(--mint);margin-top:8px;font-weight:700;}
+  /* 상세 뷰 */
+  .view{display:none;}
+  .view.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+  .back{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--mint-d);font-weight:700;cursor:pointer;margin-bottom:14px;}
+  .vtitle{font-size:19px;font-weight:900;color:var(--ink);margin-bottom:14px;}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(15,118,110,.05);}
+  .row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f4f4;font-size:13px;}
+  .row:last-child{border-bottom:none;}
+  .row .k{color:var(--ink2);font-weight:600;}
+  .row .v{color:var(--ink);font-weight:800;}
+  .bar{height:9px;border-radius:6px;background:linear-gradient(90deg,var(--mint),var(--mint-d));}
+  .bartrack{flex:1;height:9px;background:#e6f5f2;border-radius:6px;margin:0 10px;overflow:hidden;}
+  #map{height:300px;border-radius:14px;border:1px solid var(--line);}
+  .pill{display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:#ecfdf5;color:var(--mint-d);border:1px solid var(--line);}
+  .note{font-size:11px;color:var(--muted);line-height:1.6;margin-top:8px;}
+  .big-soft{font-size:30px;font-weight:900;color:var(--ink);}
+  .empty{text-align:center;color:var(--muted);font-size:13px;padding:24px 0;}
+  .refresh{font-size:11px;color:var(--mint-d);font-weight:700;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<!-- ═══ 로그인 ═══ -->
+<div id="login">
+  <div class="logo">🛡️</div>
+  <h1>CGO-FULI ADMIN</h1>
+  <p>관리자 전용 · C-60</p>
+  <input id="pw" type="password" placeholder="관리자 비밀번호" onkeydown="if(event.key==='Enter')doLogin()">
+  <button onclick="doLogin()">들어가기</button>
+  <div id="loginMsg"></div>
+</div>
+
+<!-- ═══ 대시보드 ═══ -->
+<div class="wrap" id="dash" style="display:none;">
+  <div class="topbar">
+    <div class="brand">🛡️ CGO-FULI ADMIN<small>BUILT BY C-60 × LEE JU ONE</small></div>
+    <div class="refresh" onclick="loadStats()">↻ 새로고침</div>
+  </div>
+
+  <!-- 홈 -->
+  <div id="home" class="view active">
+    <div class="hero">
+      <div class="lbl">총 가입자</div>
+      <div class="big" id="heroTotal">—</div>
+      <div class="sub">오늘 신규 <b id="heroToday">—</b>명 · 실시간 서버 연동</div>
+    </div>
+    <div class="grid">
+      <div class="scard" onclick="go('vUsers')">
+        <div class="ico">👥</div><div class="ttl">가입자 현황</div>
+        <div class="meta" id="cardUsers">—</div><div class="arrow">열기 →</div>
+      </div>
+      <div class="scard" onclick="go('vMap')">
+        <div class="ico">🌍</div><div class="ttl">국가별 지도</div>
+        <div class="meta" id="cardMap">—개국</div><div class="arrow">열기 →</div>
+      </div>
+      <div class="scard" onclick="go('vStats')">
+        <div class="ico">📊</div><div class="ttl">가입 통계</div>
+        <div class="meta">가입 방법별</div><div class="arrow">열기 →</div>
+      </div>
+      <div class="scard" onclick="go('vRevenue')">
+        <div class="ico">💰</div><div class="ttl">매출·순이익</div>
+        <div class="meta">결제 연동 후</div><div class="arrow">열기 →</div>
+      </div>
+      <div class="scard" onclick="go('vSecurity')">
+        <div class="ico">🔒</div><div class="ttl">보안 상태</div>
+        <div class="meta">무패 · RLS</div><div class="arrow">열기 →</div>
+      </div>
+      <div class="scard" onclick="go('vRecent')">
+        <div class="ico">🕐</div><div class="ttl">최근 가입</div>
+        <div class="meta">최근 20건</div><div class="arrow">열기 →</div>
+      </div>
+    </div>
+    <div class="note">🪞 개인정보(이메일·전화 원본)는 이 화면에 표시되지 않습니다. 집계 숫자만 안전하게 표시됩니다.</div>
+  </div>
+
+  <!-- 가입자 현황 -->
+  <div id="vUsers" class="view">
+    <div class="back" onclick="go('home')">← 돌아가기</div>
+    <div class="vtitle">👥 가입자 현황</div>
+    <div class="panel">
+      <div class="row"><span class="k">총 가입자</span><span class="v" id="uTotal">—</span></div>
+      <div class="row"><span class="k">오늘 신규 (24h)</span><span class="v" id="uToday">—</span></div>
+      <div class="row"><span class="k">접속 국가 수</span><span class="v" id="uCountries">—</span></div>
+    </div>
+    <div class="panel">
+      <div style="font-size:12px;font-weight:800;color:var(--ink);margin-bottom:8px;">가입 방법별</div>
+      <div id="uMethods"></div>
+    </div>
+  </div>
+
+  <!-- 국가별 지도 -->
+  <div id="vMap" class="view">
+    <div class="back" onclick="go('home')">← 돌아가기</div>
+    <div class="vtitle">🌍 국가별 접속 지도</div>
+    <div id="map"></div>
+    <div class="panel" style="margin-top:12px;">
+      <div style="font-size:12px;font-weight:800;color:var(--ink);margin-bottom:8px;">국가별 가입자</div>
+      <div id="countryList"></div>
+    </div>
+  </div>
+
+  <!-- 가입 통계 -->
+  <div id="vStats" class="view">
+    <div class="back" onclick="go('home')">← 돌아가기</div>
+    <div class="vtitle">📊 가입 통계</div>
+    <div class="panel">
+      <div style="font-size:12px;font-weight:800;color:var(--ink);margin-bottom:10px;">가입 방법 분포</div>
+      <div id="statMethods"></div>
+    </div>
+  </div>
+
+  <!-- 매출 -->
+  <div id="vRevenue" class="view">
+    <div class="back" onclick="go('home')">← 돌아가기</div>
+    <div class="vtitle">💰 매출·순이익</div>
+    <div class="panel" style="text-align:center;">
+      <div class="big-soft">₩0</div>
+      <div class="pill" style="margin-top:8px;">결제 연동 대기</div>
+      <div class="note">결제(PG) 연동 후 실시간 매출·순이익이 여기에 표시됩니다.<br>지금은 가입자 데이터만 수집 중입니다.</div>
+    </div>
+    <div class="panel">
+      <div class="row"><span class="k">예상 월 구독료</span><span class="v">₩9,900</span></div>
+      <div class="row"><span class="k">유료 전환</span><span class="v">결제 연동 후</span></div>
+      <div class="row"><span class="k">순이익</span><span class="v">결제 연동 후</span></div>
+    </div>
+  </div>
+
+  <!-- 보안 -->
+  <div id="vSecurity" class="view">
+    <div class="back" onclick="go('home')">← 돌아가기</div>
+    <div class="vtitle">🔒 보안 상태</div>
+    <div class="panel">
+      <div class="row"><span class="k">서버 연결 (Supabase)</span><span class="v" id="secDb">확인 중…</span></div>
+      <div class="row"><span class="k">개인정보 보호 (집계만 노출)</span><span class="v" style="color:var(--mint-d);">✅ 적용</span></div>
+      <div class="row"><span class="k">RLS (행 단위 접근 제한)</span><span class="v" style="color:var(--mint-d);">✅ 켜짐</span></div>
+      <div class="row"><span class="k">무패(MUFE) 양자 인증</span><span class="v">앱 내장</span></div>
+    </div>
+    <div class="note">🪞 정직 메모: 이 관리자 화면의 비밀번호는 1차 잠금입니다. 실제 데이터 보호는 서버 RLS + 집계 함수가 담당합니다. 출시 전 관리자 인증(Supabase Auth) 추가를 권장합니다.</div>
+  </div>
+
+  <!-- 최근 가입 -->
+  <div id="vRecent" class="view">
+    <div class="back" onclick="go('home')">← 돌아가기</div>
+    <div class="vtitle">🕐 최근 가입 (20건)</div>
+    <div class="panel"><div id="recentList"></div></div>
+    <div class="note">🪞 개인정보 보호를 위해 이메일·전화 원본은 표시하지 않고, 방법·국가·시각만 표시합니다.</div>
+  </div>
+
+</div>
+
+<script>
+// ── 설정 ──
+var SUPABASE_URL='https://vtqejikgqsmaulkayekv.supabase.co';
+var SUPABASE_ANON_KEY='sb_publishable_dF_1MT-oQzFqWOk64CUHQQ_64qjcIYL';
+var ADMIN_PW='cgo60';   // ← 관리자 비밀번호 (나중에 깃허브에서 바꾸세요)
+var _sb=null, _map=null, _stats=null;
+try{ _sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); }catch(e){ console.warn('sb',e); }
+
+// 국가코드 → 좌표·이름
+var GEO={
+ '+82':[36.5,127.8,'대한민국'],'+1':[39.8,-98.5,'미국'],'+44':[54,-2,'영국'],
+ '+86':[35,105,'중국'],'+852':[22.3,114.2,'홍콩'],'+81':[36,138,'일본'],
+ '+7':[61,90,'러시아'],'+91':[22,79,'인도'],'+84':[16,108,'베트남'],
+ '+66':[15,101,'태국'],'+62':[-2,118,'인도네시아'],'+60':[4,102,'말레이시아'],
+ '+63':[13,122,'필리핀'],'+49':[51,10,'독일'],'+33':[46,2,'프랑스'],
+ '+34':[40,-4,'스페인'],'+39':[42,12,'이탈리아'],'+31':[52,5,'네덜란드'],
+ '+55':[-10,-55,'브라질'],'+90':[39,35,'터키'],'+966':[24,45,'사우디'],'+380':[49,32,'우크라이나']
+};
+
+function doLogin(){
+  var v=document.getElementById('pw').value;
+  if(v===ADMIN_PW){
+    document.getElementById('login').style.display='none';
+    document.getElementById('dash').style.display='block';
+    loadStats();
+  } else {
+    document.getElementById('loginMsg').textContent='⚠️ 비밀번호가 올바르지 않습니다';
+  }
+}
+
+function go(id){
+  var vs=document.querySelectorAll('.view');
+  for(var i=0;i<vs.length;i++) vs[i].classList.remove('active');
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  if(id==='vMap') setTimeout(renderMap,60);
+}
+
+function loadStats(){
+  if(!_sb){ return; }
+  _sb.rpc('get_admin_stats').then(function(r){
+    if(r.error){ console.warn('stats',r.error); document.getElementById('secDb').textContent='❌ 오류'; return; }
+    _stats=r.data; render();
+    document.getElementById('secDb').textContent='✅ 정상';
+  });
+}
+
+function render(){
+  if(!_stats) return;
+  var s=_stats;
+  document.getElementById('heroTotal').textContent=s.total;
+  document.getElementById('heroToday').textContent=s.today;
+  document.getElementById('cardUsers').textContent=s.total+'명';
+  document.getElementById('cardMap').textContent=(s.by_country?s.by_country.length:0)+'개 지역';
+  document.getElementById('uTotal').textContent=s.total+'명';
+  document.getElementById('uToday').textContent=s.today+'명';
+  document.getElementById('uCountries').textContent=(s.by_country?s.by_country.length:0)+'개';
+
+  // 방법별
+  var mh=barList(s.by_method,'method',s.total);
+  document.getElementById('uMethods').innerHTML=mh;
+  document.getElementById('statMethods').innerHTML=mh;
+
+  // 국가별 리스트
+  var cl='';
+  (s.by_country||[]).forEach(function(c){
+    var nm=(GEO[c.country]?GEO[c.country][2]:c.country)+' ('+c.country+')';
+    cl+='<div class="row"><span class="k">'+nm+'</span><span class="v">'+c.count+'명</span></div>';
+  });
+  document.getElementById('countryList').innerHTML=cl||'<div class="empty">데이터 없음</div>';
+
+  // 최근
+  var rl='';
+  (s.recent||[]).forEach(function(r){
+    var t=new Date(r.created_at); var ts=(t.getMonth()+1)+'/'+t.getDate()+' '+('0'+t.getHours()).slice(-2)+':'+('0'+t.getMinutes()).slice(-2);
+    var ct=r.country?(GEO[r.country]?GEO[r.country][2]:r.country):'-';
+    rl+='<div class="row"><span class="k">'+methodLabel(r.method)+' · '+ct+'</span><span class="v" style="font-weight:600;color:var(--muted);">'+ts+'</span></div>';
+  });
+  document.getElementById('recentList').innerHTML=rl||'<div class="empty">아직 가입 기록이 없습니다</div>';
+}
+
+function barList(arr,key,total){
+  if(!arr||!arr.length) return '<div class="empty">데이터 없음</div>';
+  var max=Math.max.apply(null,arr.map(function(a){return a.count;}));
+  var h='';
+  arr.forEach(function(a){
+    var pct=max?Math.round(a.count/max*100):0;
+    h+='<div style="display:flex;align-items:center;margin:7px 0;"><span style="width:92px;font-size:12px;color:var(--ink2);font-weight:600;">'+methodLabel(a[key])+'</span><span class="bartrack"><span class="bar" style="width:'+pct+'%;display:block;"></span></span><span style="width:30px;text-align:right;font-size:12px;font-weight:800;color:var(--ink);">'+a.count+'</span></div>';
+  });
+  return h;
+}
+
+function methodLabel(m){
+  var L={email:'📧 이메일',phone:'📱 전화',google:'🟦 Google',apple:'🍎 Apple',facebook:'📘 Facebook',yahoo:'Y! Yahoo',kakao:'💬 카카오',naver:'Ⓝ 네이버',line:'💚 LINE',wechat:'💬 WeChat',alipay:'🅰️ Alipay',vk:'Ⓥ VK',yandex:'Я Yandex',zalo:'🇿 Zalo',unknown:'기타'};
+  return L[m]||m;
+}
+
+function renderMap(){
+  if(_map){ _map.invalidateSize(); return; }
+  _map=L.map('map',{attributionControl:false,zoomControl:true}).setView([25,40],1.4);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:8}).addTo(_map);
+  if(_stats&&_stats.by_country){
+    var max=Math.max.apply(null,_stats.by_country.map(function(c){return c.count;}))||1;
+    _stats.by_country.forEach(function(c){
+      var g=GEO[c.country]; if(!g) return;
+      var radius=10+ (c.count/max)*22;
+      L.circleMarker([g[0],g[1]],{radius:radius,color:'#0d9488',fillColor:'#14b8a6',fillOpacity:.55,weight:2})
+        .bindPopup('<b>'+g[2]+'</b><br>'+c.count+'명').addTo(_map);
+    });
+  }
+}
+</script>
+</body>
+</html>
