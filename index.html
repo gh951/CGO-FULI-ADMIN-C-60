@@ -1774,10 +1774,11 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
   var GEO={'+82':'대한민국','+1':'미국','+44':'영국','+86':'중국','+852':'홍콩','+81':'일본','+7':'러시아','+91':'인도','+84':'베트남','+66':'태국','+62':'인도네시아','+60':'말레이시아','+63':'필리핀','+49':'독일','+33':'프랑스','+34':'스페인','+39':'이탈리아','+31':'네덜란드','+55':'브라질','+90':'터키','+966':'사우디','+380':'우크라이나'};
   var ML={email:'📧 이메일',phone:'📱 전화',google:'🟦 Google',apple:'🍎 Apple',facebook:'📘 Facebook',yahoo:'Y! Yahoo',kakao:'💬 카카오',naver:'Ⓝ 네이버',line:'💚 LINE',wechat:'💬 WeChat',alipay:'🅰️ Alipay',vk:'Ⓥ VK',yandex:'Я Yandex',zalo:'🇿 Zalo',unknown:'기타'};
   function setT(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; }
+  var _sbClient=null;
+  function _getSb(){ if(_sbClient) return _sbClient; if(!window.supabase) return null; try{ _sbClient=window.supabase.createClient(SB_URL,SB_KEY); }catch(e){} return _sbClient; }
   function fillReal(){
     if(_cgoMode()!=='real') return;
-    if(!window.supabase) return;
-    var sb; try{ sb=window.supabase.createClient(SB_URL,SB_KEY); }catch(e){ return; }
+    var sb=_getSb(); if(!sb) return;
     sb.rpc('get_admin_stats').then(function(r){
       if(r.error){ console.warn('[C-60 SB]',r.error); setT('connStatus','SERVER ERROR'); return; }
       var s=r.data;
