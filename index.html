@@ -1747,10 +1747,10 @@ function _cgoDrawAll(){
   document.getElementById('revMonthDelta').textContent= d.monthRev? '+312% vs 지난달':'—';
   document.getElementById('revArpuDelta').textContent='유료당 평균';
   document.getElementById('revConvDelta').textContent='FREE→유료';
-  drawWorld(d.countries);drawCountryList(d.countries);
-  drawWeeklyChart(d.weekly);drawMonthlyChart(d.monthly);
-  drawUserTable(us,'','all');drawPayTable(ps,'','all');
-  drawFeatureList(d.features,'featureList');drawFeatureList(d.languages,'langList');drawFeatureList(d.devices,'deviceList');
+  try{drawWorld(d.countries);}catch(e){console.warn('drawWorld',e);} try{drawCountryList(d.countries);}catch(e){}
+  try{drawWeeklyChart(d.weekly);}catch(e){} try{drawMonthlyChart(d.monthly);}catch(e){}
+  try{drawUserTable(us,'','all');}catch(e){} try{drawPayTable(ps,'','all');}catch(e){}
+  try{drawFeatureList(d.features,'featureList');}catch(e){} try{drawFeatureList(d.languages,'langList');}catch(e){} try{drawFeatureList(d.devices,'deviceList');}catch(e){}
 }
 function initShell(){
   initFirebase();
@@ -1804,12 +1804,15 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
   }
   // 모드 토글
   window._cgoToggleMode=function(){
-    var m=(_cgoMode()==='real')?'demo':'real';
-    window._cgoMode=m;
-    try{ localStorage.setItem('cgo_admin_mode',m); }catch(e){}
-    if(typeof _cgoDrawAll==='function') _cgoDrawAll();  // 그 자리에서 다시 그림 (새로고침 X)
-    fillReal();
-    paintToggle();
+    try{
+      var m=(_cgoMode()==='real')?'demo':'real';
+      window._cgoMode=m;
+      try{ localStorage.setItem('cgo_admin_mode',m); }catch(e){}
+      paintToggle();                                   // 배지 먼저 (항상 즉시 반응)
+      try{ if(typeof _cgoDrawAll==='function') _cgoDrawAll(); }catch(e){ console.warn('[C-60] draw',e); }
+      try{ fillReal(); }catch(e){ console.warn('[C-60] fillReal',e); }
+      console.log('[C-60] 모드 전환 →', m);
+    }catch(err){ console.error('[C-60] toggle',err); alert('전환 오류: '+err.message); }
   };
   function paintToggle(){
     var t=document.getElementById('modeToggle'); if(!t) return;
