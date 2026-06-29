@@ -779,6 +779,7 @@ body::before{content:'';position:fixed;inset:0;background:
     <div class="tab active" data-tab="overview">📊 종합 현황</div>
     <div class="tab" data-tab="users">👥 사용자</div>
     <div class="tab" data-tab="revenue">💰 매출·결제</div>
+    <div class="tab" data-tab="acct">🧮 회계</div>
     <div class="tab" data-tab="features">⚡ 기능 분석</div>
     <div class="tab" data-tab="live">🔴 실시간 로그</div>
   </div>
@@ -831,6 +832,20 @@ body::before{content:'';position:fixed;inset:0;background:
       <div class="panel-title"><div class="panel-title-left">💳 결제 내역</div><div class="panel-badge" id="payTableBadge">0건</div></div>
       <div class="search-bar"><input type="text" placeholder="검색..." id="paySearch"><select id="payMethodFilter"><option value="all">전체</option><option value="card">신용카드</option><option value="toss">토스</option><option value="kakao">카카오페이</option><option value="paypal">PayPal</option><option value="bank">현금입금</option></select></div>
       <div style="overflow-x:auto"><table class="user-table"><thead><tr><th>일시</th><th>사용자</th><th>국가</th><th>등급</th><th>금액</th><th>방법</th><th>상태</th></tr></thead><tbody id="payTableBody"></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-acct">
+    <div class="kpi-grid">
+      <div class="kpi revenue"><div class="kpi-label" data-icon="💰">이번달 매출</div><div class="kpi-value" id="acctRev">₩--</div><div class="kpi-delta" id="acctRevSub">결제 연동 대기</div></div>
+      <div class="kpi monthly"><div class="kpi-label" data-icon="🧾">이번달 비용</div><div class="kpi-value" id="acctExp">₩--</div><div class="kpi-delta" id="acctExpSub">입력 합계</div></div>
+      <div class="kpi signup"><div class="kpi-label" data-icon="📈">순이익</div><div class="kpi-value" id="acctProfit">₩--</div><div class="kpi-delta" id="acctProfitSub">매출 − 비용</div></div>
+      <div class="kpi users"><div class="kpi-label" data-icon="💎">순이익률</div><div class="kpi-value" id="acctMargin">--%</div><div class="kpi-delta" id="acctMarginSub">이익/매출</div></div>
+    </div>
+    <div class="panel" style="margin-bottom:20px"><div class="panel-title"><div class="panel-title-left">📊 월별 매출 vs 비용</div><div class="panel-badge" id="acctChartBadge">데모</div></div><div class="chart-wrap" style="height:280px"><svg id="acctChartSvg" viewBox="0 0 800 280" preserveAspectRatio="none"></svg></div></div>
+    <div class="panel-grid">
+      <div class="panel"><div class="panel-title"><div class="panel-title-left">🧾 비용 내역 (항목별)</div></div><div class="country-list" id="acctExpList"></div></div>
+      <div class="panel"><div class="panel-title"><div class="panel-title-left">💰 매출 내역 (출처별)</div></div><div class="country-list" id="acctRevList"></div></div>
     </div>
   </div>
 
@@ -1814,6 +1829,7 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
       paintToggle();                                   // 배지 먼저 (항상 즉시 반응)
       try{ if(typeof _cgoDrawAll==='function') _cgoDrawAll(); }catch(e){ console.warn('[C-60] draw',e); }
       try{ fillReal(); }catch(e){ console.warn('[C-60] fillReal',e); }
+      try{ if(window._cgoDrawAcct) window._cgoDrawAcct(); }catch(e){ console.warn('[C-61] acct',e); }
       console.log('[C-60] 모드 전환 →', m);
     }catch(err){ console.error('[C-60] toggle',err); alert('전환 오류: '+err.message); }
   };
@@ -1828,6 +1844,93 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
   setTimeout(paintToggle, 300);
   setTimeout(fillReal, 1800);
   setInterval(fillReal, 30000);
+})();
+</script>
+<script>
+/* ══ C-61 회계 대시보드 — 데모/본서버 토글 재사용 (집계만, PII 없음) ══ */
+(function(){
+  var SB_URL='https://vtqejikgqsmaulkayekv.supabase.co';
+  var SB_KEY='sb_publishable_dF_1MT-oQzFqWOk64CUHQQ_64qjcIYL';
+  var _sb=null;
+  function _esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]; }); }
+  function _sbc(){ if(_sb)return _sb; if(!window.supabase)return null; try{ _sb=window.supabase.createClient(SB_URL,SB_KEY); }catch(e){} return _sb; }
+  function won(n){ return '₩'+(Math.round(+n||0)).toLocaleString(); }
+  function mode(){ return (typeof _cgoMode==='function')?_cgoMode():'demo'; }
+  function T(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; }
+
+  // 데모 샘플(시연용) — 본 서버 모드면 안 쓰고 실데이터로 대체
+  function demoAcct(){ return {
+    monthly:[
+      {m:'26/01',rev:8200000,exp:2900000},{m:'26/02',rev:9100000,exp:3050000},
+      {m:'26/03',rev:9800000,exp:3200000},{m:'26/04',rev:10600000,exp:3400000},
+      {m:'26/05',rev:11500000,exp:3650000},{m:'26/06',rev:12400000,exp:3850000}
+    ],
+    by_category:[
+      {cat:'API비(Groq 등)',amt:1240000},{cat:'법인세(예치)',amt:900000},
+      {cat:'서버비(Supabase·Vercel)',amt:680000},{cat:'앱등록(구글·애플)',amt:430000},
+      {cat:'카드 수수료(2.9%)',amt:359600},{cat:'도메인',amt:240800}
+    ],
+    by_source:[
+      {src:'구독 PREMIUM',amt:7920000},{src:'구독 VVIP',amt:3500000},{src:'CGO 오행 쇼핑',amt:980000}
+    ]
+  }; }
+
+  function setKpis(rev,exp){
+    var profit=rev-exp, margin=rev>0?Math.round(profit/rev*100):0;
+    T('acctRev',won(rev)); T('acctExp',won(exp)); T('acctProfit',won(profit)); T('acctMargin',margin+'%');
+  }
+  function drawChart(monthly){
+    var svg=document.getElementById('acctChartSvg'); if(!svg)return;
+    var W=800,H=280,pad=34,n=(monthly&&monthly.length)||1, max=1;
+    (monthly||[]).forEach(function(m){ max=Math.max(max,+m.rev||0,+m.exp||0); });
+    var gw=(W-pad*2)/n, bw=Math.min(26,gw*0.30), h='';
+    (monthly||[]).forEach(function(m,i){
+      var x=pad+i*gw+gw/2;
+      var rh=((+m.rev||0)/max)*(H-pad*2), eh=((+m.exp||0)/max)*(H-pad*2);
+      h+='<rect x="'+(x-bw-2)+'" y="'+(H-pad-rh)+'" width="'+bw+'" height="'+rh+'" fill="#34d399" rx="3"/>';
+      h+='<rect x="'+(x+2)+'" y="'+(H-pad-eh)+'" width="'+bw+'" height="'+eh+'" fill="#f87171" rx="3"/>';
+      h+='<text x="'+x+'" y="'+(H-pad+16)+'" text-anchor="middle" fill="#9aa6bf" font-size="11" font-family="JetBrains Mono">'+_esc(m.m)+'</text>';
+    });
+    h+='<text x="'+pad+'" y="18" fill="#34d399" font-size="11" font-family="JetBrains Mono">■ 매출</text>';
+    h+='<text x="'+(pad+70)+'" y="18" fill="#f87171" font-size="11" font-family="JetBrains Mono">■ 비용</text>';
+    svg.innerHTML=h;
+  }
+  function drawList(id,arr,key){
+    var el=document.getElementById(id); if(!el)return;
+    if(!arr||!arr.length){ el.innerHTML='<div style="padding:14px;color:#7b8aa0;font-size:12px;text-align:center;">데이터 없음</div>'; return; }
+    var max=Math.max.apply(null,arr.map(function(a){return +a.amt||0;}))||1;
+    el.innerHTML=arr.map(function(a){
+      var pct=Math.round((+a.amt||0)/max*100);
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);"><span style="flex:0 0 140px;font-size:12px;color:#cdd7e6;">'+_esc(a[key])+'</span><span style="flex:1;height:7px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;"><span style="display:block;height:100%;width:'+pct+'%;background:linear-gradient(90deg,#d4af37,#f0d98a);"></span></span><span style="flex:0 0 92px;text-align:right;font-size:12px;font-weight:700;color:#f0d98a;">'+won(a.amt)+'</span></div>';
+    }).join('');
+  }
+  function badge(real){ T('acctChartBadge', real?'본 서버':'데모'); }
+
+  function paintDemo(){
+    var d=demoAcct(), cur=d.monthly[d.monthly.length-1]||{rev:0,exp:0};
+    setKpis(cur.rev,cur.exp); drawChart(d.monthly);
+    drawList('acctExpList',d.by_category,'cat'); drawList('acctRevList',d.by_source,'src');
+    badge(false); T('acctRevSub','데모 시연값');
+  }
+  function paintReal(){
+    badge(true); T('acctRevSub','본 서버 조회 중…');
+    var sb=_sbc();
+    if(!sb){ setKpis(0,0); drawChart([]); drawList('acctExpList',[],'cat'); drawList('acctRevList',[],'src'); T('acctRevSub','연결 객체 없음'); return; }
+    sb.rpc('get_accounting_stats').then(function(r){
+      if(r.error){ console.warn('[C-61 ACCT]',r.error); setKpis(0,0); drawChart([]); drawList('acctExpList',[],'cat'); drawList('acctRevList',[],'src'); T('acctRevSub','함수 미설치 — SQL 먼저 Run'); return; }
+      var s=r.data||{};
+      setKpis(+s.month_rev||0, +s.month_exp||0);
+      drawChart(s.monthly||[]);
+      drawList('acctExpList', s.by_category||[], 'cat');
+      drawList('acctRevList', s.by_source||[], 'src');
+      T('acctRevSub', (+s.month_rev>0)?'실데이터':'결제 연동 대기 · ₩0');
+      console.log('[C-61 ACCT] ✅ 실데이터 — 매출',s.month_rev,'· 비용',s.month_exp);
+    });
+  }
+  window._cgoDrawAcct=function(){ try{ if(mode()==='real') paintReal(); else paintDemo(); }catch(e){ console.warn('[C-61 ACCT] draw',e); } };
+
+  setTimeout(window._cgoDrawAcct, 1500);
+  setInterval(function(){ if(mode()==='real') window._cgoDrawAcct(); }, 30000);
 })();
 </script>
 </body>
