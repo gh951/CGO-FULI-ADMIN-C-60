@@ -912,6 +912,38 @@ body::before{content:'';position:fixed;inset:0;background:
         <div id="mkMsg" style="margin-top:13px;font-size:13px;min-height:18px;line-height:1.5"></div>
       </div>
     </div>
+
+    <div class="panel" style="max-width:540px;margin-top:18px">
+      <div class="panel-title"><div class="panel-title-left">👤 다른 사람에게 마스터키 부여</div></div>
+      <div style="padding:14px;color:var(--text-2);font-size:12.5px;line-height:1.75">
+        이길원·테스터 등 <b>여러 명</b>에게 각자 마스터키를 줄 수 있어요. 사람마다 본비번·카오스를 따로 정합니다.<br>
+        부여하려면 맨 아래 <b>내 관리자 비번</b>(위에서 저장한 내 마스터키 본비번)이 필요합니다.
+      </div>
+      <div style="padding:0 14px 16px">
+        <label style="display:block;font-size:12px;color:var(--text-2);margin:6px 0 5px">이름 / 메모</label>
+        <input id="gkLabel" type="text" placeholder="예: 이길원" style="width:100%;padding:11px;border:1px solid rgba(212,168,67,.3);border-radius:10px;background:rgba(0,0,0,.25);color:#f0e6c8;font-size:14px;box-sizing:border-box;font-family:inherit">
+        <label style="display:block;font-size:12px;color:var(--text-2);margin:12px 0 5px">그 사람 본비번 (앱 로그인 때 입력할 값)</label>
+        <input id="gkPw" type="text" placeholder="예: gil1234" style="width:100%;padding:11px;border:1px solid rgba(212,168,67,.3);border-radius:10px;background:rgba(0,0,0,.25);color:#f0e6c8;font-size:14px;box-sizing:border-box;font-family:inherit">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px">
+          <div><div style="font-size:11px;color:var(--text-2);margin-bottom:3px">색(0-11)</div><input id="gkColor" type="number" min="0" max="11" value="6" style="width:100%;padding:9px;border:1px solid rgba(212,168,67,.3);border-radius:8px;background:rgba(0,0,0,.25);color:#f0e6c8;box-sizing:border-box;font-family:inherit"></div>
+          <div><div style="font-size:11px;color:var(--text-2);margin-bottom:3px">대(0-10)</div><input id="gkBig" type="number" min="0" max="10" value="6" style="width:100%;padding:9px;border:1px solid rgba(212,168,67,.3);border-radius:8px;background:rgba(0,0,0,.25);color:#f0e6c8;box-sizing:border-box;font-family:inherit"></div>
+          <div><div style="font-size:11px;color:var(--text-2);margin-bottom:3px">소(0-10)</div><input id="gkSmall" type="number" min="0" max="10" value="0" style="width:100%;padding:9px;border:1px solid rgba(212,168,67,.3);border-radius:8px;background:rgba(0,0,0,.25);color:#f0e6c8;box-sizing:border-box;font-family:inherit"></div>
+          <div><div style="font-size:11px;color:var(--text-2);margin-bottom:3px">미세(0-10)</div><input id="gkMicro" type="number" min="0" max="10" value="6" style="width:100%;padding:9px;border:1px solid rgba(212,168,67,.3);border-radius:8px;background:rgba(0,0,0,.25);color:#f0e6c8;box-sizing:border-box;font-family:inherit"></div>
+        </div>
+        <label style="display:block;font-size:12px;color:var(--gold);margin:16px 0 5px">🔐 내 관리자 비번 (= 위에서 저장한 내 마스터키 본비번)</label>
+        <input id="gkAdmin" type="text" placeholder="예: lee6606777" style="width:100%;padding:11px;border:1px solid rgba(212,168,67,.45);border-radius:10px;background:rgba(0,0,0,.25);color:#f0e6c8;font-size:14px;box-sizing:border-box;font-family:inherit">
+        <button id="gkAddBtn" style="margin-top:16px;width:100%;padding:13px;background:linear-gradient(135deg,#5eead4,#0d9488);border:none;border-radius:11px;color:#04201c;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">➕ 이 사람에게 마스터키 부여</button>
+        <div id="gkMsg" style="margin-top:13px;font-size:13px;min-height:18px;line-height:1.5"></div>
+      </div>
+    </div>
+
+    <div class="panel" style="max-width:540px;margin-top:18px">
+      <div class="panel-title"><div class="panel-title-left">📋 부여된 마스터키 목록</div><button id="gkReloadBtn" style="padding:6px 14px;background:rgba(212,168,67,.18);border:1px solid rgba(212,168,67,.4);border-radius:8px;color:var(--gold);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔄 불러오기</button></div>
+      <div style="padding:14px">
+        <div id="gkListMsg" style="font-size:12px;color:var(--text-2);margin-bottom:12px">위 "내 관리자 비번" 입력 후 🔄 불러오기를 누르세요</div>
+        <div id="gkList"></div>
+      </div>
+    </div>
   </div>
 
   <div class="footer-engrave">
@@ -2121,8 +2153,82 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
       }
     }).catch(function(e){ if(btn){btn.disabled=false;btn.textContent='💾 마스터키 저장';} msg('❌ 오류: '+e,false); });
   }
+  function gkmsg(t,ok){ var m=document.getElementById('gkMsg'); if(!m)return; m.textContent=t; m.style.color=ok?'#34d399':'#f87171'; }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function renderKeys(keys){
+    var box=document.getElementById('gkList'); if(!box)return;
+    if(!keys||!keys.length){ box.innerHTML='<div style="font-size:12.5px;color:var(--text-2);padding:8px 0">아직 부여된 마스터키가 없습니다.</div>'; return; }
+    var html='';
+    keys.forEach(function(k){
+      var d=k.created_at?String(k.created_at).slice(0,10):'';
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;border:1px solid rgba(212,168,67,.18);border-radius:10px;margin-bottom:8px;background:rgba(0,0,0,.18)">'
+        +'<div style="min-width:0"><div style="font-size:13.5px;font-weight:700;color:#f0e6c8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(k.label)+'</div>'
+        +'<div style="font-size:11px;color:var(--text-2);margin-top:2px">카오스 좌표 '+(k.coord||0)+' · 색 '+(k.color||0)+(d?(' · '+d):'')+'</div></div>'
+        +'<button data-del="'+k.id+'" style="flex:0 0 auto;padding:7px 12px;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);border-radius:8px;color:#f87171;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">삭제</button>'
+        +'</div>';
+    });
+    box.innerHTML=html;
+  }
+  function gkLoad(){
+    var s=sb(); var lm=document.getElementById('gkListMsg');
+    if(!s){ if(lm) lm.textContent='서버 연결 객체 없음'; return; }
+    var admin=val('gkAdmin').trim();
+    if(!admin){ if(lm){ lm.textContent='먼저 위 "내 관리자 비번"을 입력하세요'; lm.style.color='#f87171'; } return; }
+    if(lm){ lm.textContent='불러오는 중...'; lm.style.color='var(--text-2)'; }
+    sha(admin).then(function(ah){
+      s.rpc('list_master_keys',{p_admin_hash:ah}).then(function(r){
+        if(r&&!r.error&&r.data&&r.data.ok){
+          renderKeys(r.data.keys||[]);
+          if(lm){ lm.textContent='총 '+((r.data.keys||[]).length)+'명 부여됨'; lm.style.color='var(--text-2)'; }
+        } else {
+          var em=(r&&r.data&&r.data.msg)||(r&&r.error&&r.error.message)||'조회 실패 (master_keys_setup.sql 적용 확인)';
+          if(lm){ lm.textContent='❌ '+em; lm.style.color='#f87171'; }
+          renderKeys([]);
+        }
+      }).catch(function(e){ if(lm){ lm.textContent='❌ 오류: '+e; lm.style.color='#f87171'; } });
+    });
+  }
+  async function gkAdd(){
+    var s=sb(); if(!s){ gkmsg('서버 연결 객체 없음',false); return; }
+    var label=val('gkLabel').trim(), pw=val('gkPw').trim(), admin=val('gkAdmin').trim();
+    if(!label){ gkmsg('이름/메모를 입력하세요',false); return; }
+    if(pw.length<2){ gkmsg('그 사람 본비번을 2자 이상 입력하세요',false); return; }
+    if(!admin){ gkmsg('내 관리자 비번을 입력하세요',false); return; }
+    var coord=num('gkBig')*1000000+num('gkSmall')*1000+num('gkMicro');
+    var color=num('gkColor');
+    var newHash=await sha(pw), adminHash=await sha(admin);
+    if(!newHash||!adminHash){ gkmsg('해시 생성 실패 (보안 컨텍스트 확인)',false); return; }
+    var btn=document.getElementById('gkAddBtn'); if(btn){btn.disabled=true;btn.textContent='부여 중...';}
+    s.rpc('add_master_key',{p_admin_hash:adminHash,p_label:label,p_new_hash:newHash,p_coord:coord,p_color:color}).then(function(r){
+      if(btn){btn.disabled=false;btn.textContent='➕ 이 사람에게 마스터키 부여';}
+      if(r&&!r.error&&r.data&&r.data.ok){
+        gkmsg('✅ '+(r.data.msg||'부여 완료'),true);
+        var L=document.getElementById('gkLabel'); if(L)L.value='';
+        var P=document.getElementById('gkPw'); if(P)P.value='';
+        gkLoad();
+      } else {
+        var em=(r&&r.data&&r.data.msg)||(r&&r.error&&r.error.message)||'부여 실패';
+        gkmsg('❌ '+em,false);
+      }
+    }).catch(function(e){ if(btn){btn.disabled=false;btn.textContent='➕ 이 사람에게 마스터키 부여';} gkmsg('❌ 오류: '+e,false); });
+  }
+  function gkDelete(id){
+    var s=sb(); if(!s)return;
+    var admin=val('gkAdmin').trim();
+    if(!admin){ gkmsg('내 관리자 비번을 입력하세요 (삭제 인증)',false); return; }
+    if(!confirm('이 마스터키를 삭제할까요? 해당 사용자는 무제한이 해제됩니다.')) return;
+    sha(admin).then(function(ah){
+      s.rpc('delete_master_key',{p_admin_hash:ah,p_id:id}).then(function(r){
+        if(r&&!r.error&&r.data&&r.data.ok){ gkLoad(); }
+        else { var em=(r&&r.data&&r.data.msg)||(r&&r.error&&r.error.message)||'삭제 실패'; gkmsg('❌ '+em,false); }
+      }).catch(function(e){ gkmsg('❌ 오류: '+e,false); });
+    });
+  }
   function init(){
     var b=document.getElementById('mkSaveBtn'); if(b) b.addEventListener('click',save);
+    var ab=document.getElementById('gkAddBtn'); if(ab) ab.addEventListener('click',gkAdd);
+    var rb=document.getElementById('gkReloadBtn'); if(rb) rb.addEventListener('click',gkLoad);
+    var lst=document.getElementById('gkList'); if(lst) lst.addEventListener('click',function(e){ var t=e.target; var btn=(t.closest?t.closest('[data-del]'):null); if(btn){ gkDelete(parseInt(btn.getAttribute('data-del'),10)); } });
     document.querySelectorAll('.tab').forEach(function(t){ if(t.dataset && t.dataset.tab==='master'){ t.addEventListener('click',refreshStatus); } });
     refreshStatus();
   }
