@@ -847,6 +847,26 @@ body::before{content:'';position:fixed;inset:0;background:
       <div class="panel"><div class="panel-title"><div class="panel-title-left">🧾 비용 내역 (항목별)</div></div><div class="country-list" id="acctExpList"></div></div>
       <div class="panel"><div class="panel-title"><div class="panel-title-left">💰 매출 내역 (출처별)</div></div><div class="country-list" id="acctRevList"></div></div>
     </div>
+    <div class="panel" style="margin-top:20px">
+      <div class="panel-title"><div class="panel-title-left">✍️ 비용·수입 입력</div><div class="panel-badge">🔒 PIN 필요</div></div>
+      <div class="panel-grid">
+        <div style="background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.18);border-radius:12px;padding:14px">
+          <div style="font-size:13px;font-weight:800;color:#f87171;margin-bottom:10px">🧾 지출 추가</div>
+          <select id="expCat" style="width:100%;margin-bottom:8px;padding:10px;background:#0f1830;border:1px solid rgba(255,255,255,.12);border-radius:9px;color:#e7eefc;font-size:13px;font-family:inherit;box-sizing:border-box"><option>서버비</option><option>도메인</option><option>API비</option><option>앱등록(구글·애플)</option><option>카드 수수료</option><option>법인세</option><option>기타</option></select>
+          <input id="expAmt" type="number" inputmode="numeric" placeholder="금액 (원)" style="width:100%;margin-bottom:8px;padding:10px;background:#0f1830;border:1px solid rgba(255,255,255,.12);border-radius:9px;color:#e7eefc;font-size:13px;font-family:inherit;box-sizing:border-box">
+          <input id="expMemo" type="text" placeholder="메모 (예: Vercel 6월)" style="width:100%;margin-bottom:10px;padding:10px;background:#0f1830;border:1px solid rgba(255,255,255,.12);border-radius:9px;color:#e7eefc;font-size:13px;font-family:inherit;box-sizing:border-box">
+          <button onclick="acctAddExpense()" style="width:100%;padding:11px;border:none;border-radius:10px;color:#fff;font-weight:800;cursor:pointer;font-family:inherit;background:linear-gradient(135deg,#dc2626,#f87171)">+ 지출 저장</button>
+        </div>
+        <div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.18);border-radius:12px;padding:14px">
+          <div style="font-size:13px;font-weight:800;color:#34d399;margin-bottom:10px">💰 수입 추가</div>
+          <select id="revSrc" style="width:100%;margin-bottom:8px;padding:10px;background:#0f1830;border:1px solid rgba(255,255,255,.12);border-radius:9px;color:#e7eefc;font-size:13px;font-family:inherit;box-sizing:border-box"><option>구독 PREMIUM</option><option>구독 VVIP</option><option>CGO 오행 쇼핑</option><option>기타</option></select>
+          <input id="revAmt" type="number" inputmode="numeric" placeholder="금액 (원)" style="width:100%;margin-bottom:8px;padding:10px;background:#0f1830;border:1px solid rgba(255,255,255,.12);border-radius:9px;color:#e7eefc;font-size:13px;font-family:inherit;box-sizing:border-box">
+          <input id="revCountry" type="text" placeholder="국가코드 (예: +82, 선택)" style="width:100%;margin-bottom:10px;padding:10px;background:#0f1830;border:1px solid rgba(255,255,255,.12);border-radius:9px;color:#e7eefc;font-size:13px;font-family:inherit;box-sizing:border-box">
+          <button onclick="acctAddRevenue()" style="width:100%;padding:11px;border:none;border-radius:10px;color:#fff;font-weight:800;cursor:pointer;font-family:inherit;background:linear-gradient(135deg,#0d9488,#34d399)">+ 수입 저장</button>
+        </div>
+      </div>
+      <div id="acctAddMsg" style="margin-top:12px;font-size:12px;color:#9aa6bf;min-height:18px"></div>
+    </div>
   </div>
 
   <div class="tab-content" id="tab-features">
@@ -1929,6 +1949,38 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
     });
   }
   window._cgoDrawAcct=function(){ try{ if(mode()==='real') paintReal(); else paintDemo(); }catch(e){ console.warn('[C-61 ACCT] draw',e); } };
+
+  /* ── 입력 폼 (PIN 6606 · 클라이언트 가벼운 잠금) ── */
+  var ACCT_PIN='6606';
+  function _amsg(t,ok){ var e=document.getElementById('acctAddMsg'); if(e){ e.textContent=t; e.style.color=ok?'#34d399':'#f87171'; } }
+  function _gv(id){ var e=document.getElementById(id); return e?String(e.value||'').trim():''; }
+  function _clr(ids){ ids.forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; }); }
+  function _askPin(){ var p=prompt('관리자 PIN'); return p===ACCT_PIN; }
+
+  window.acctAddExpense=function(){
+    var sb=_sbc(); if(!sb){ _amsg('서버 연결 객체 없음 — supabase-js 로드 확인',false); return; }
+    var amt=parseFloat(_gv('expAmt'));
+    if(!(amt>0)){ _amsg('금액을 0보다 큰 숫자로 입력하세요',false); return; }
+    if(!_askPin()){ _amsg('PIN 불일치 — 저장 취소',false); return; }
+    _amsg('저장 중…',true);
+    sb.from('expenses').insert({ category:_gv('expCat')||'기타', amount:amt, currency:'KRW', memo:_gv('expMemo')||null }).then(function(r){
+      if(r.error){ console.warn('[C-61 ACCT] exp',r.error); _amsg('저장 실패: '+(r.error.message||'권한/제약 확인 · SQL 먼저 Run'),false); return; }
+      _amsg('✅ 지출 저장됨 · ₩'+amt.toLocaleString()+' (본 서버 모드에서 반영)',true);
+      _clr(['expAmt','expMemo']); try{ paintReal(); }catch(e){}
+    });
+  };
+  window.acctAddRevenue=function(){
+    var sb=_sbc(); if(!sb){ _amsg('서버 연결 객체 없음 — supabase-js 로드 확인',false); return; }
+    var amt=parseFloat(_gv('revAmt'));
+    if(!(amt>0)){ _amsg('금액을 0보다 큰 숫자로 입력하세요',false); return; }
+    if(!_askPin()){ _amsg('PIN 불일치 — 저장 취소',false); return; }
+    _amsg('저장 중…',true);
+    sb.from('revenues').insert({ amount:amt, currency:'KRW', source:_gv('revSrc')||'기타', country:_gv('revCountry')||null }).then(function(r){
+      if(r.error){ console.warn('[C-61 ACCT] rev',r.error); _amsg('저장 실패: '+(r.error.message||'권한/제약 확인 · SQL 먼저 Run'),false); return; }
+      _amsg('✅ 수입 저장됨 · ₩'+amt.toLocaleString()+' (본 서버 모드에서 반영)',true);
+      _clr(['revAmt','revCountry']); try{ paintReal(); }catch(e){}
+    });
+  };
 
   setTimeout(window._cgoDrawAcct, 1500);
   setInterval(function(){ if(mode()==='real') window._cgoDrawAcct(); }, 30000);
