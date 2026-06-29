@@ -782,6 +782,7 @@ body::before{content:'';position:fixed;inset:0;background:
     <div class="tab" data-tab="acct">🧮 회계</div>
     <div class="tab" data-tab="features">⚡ 기능 분석</div>
     <div class="tab" data-tab="live">🔴 실시간 로그</div>
+    <div class="tab" data-tab="master">🔑 마스터키</div>
   </div>
 
   <div class="tab-content active" id="tab-overview">
@@ -885,6 +886,32 @@ body::before{content:'';position:fixed;inset:0;background:
 
   <div class="tab-content" id="tab-live">
     <div class="panel"><div class="panel-title"><div class="panel-title-left">🔴 실시간 활동 (전체)</div><div class="panel-badge">LIVE</div></div><div class="live-log" id="liveLogFull" style="height:600px"></div></div>
+  </div>
+
+  <div class="tab-content" id="tab-master">
+    <div class="panel" style="max-width:540px">
+      <div class="panel-title"><div class="panel-title-left">🔑 마스터키 설정 (앱 무제한 입장)</div></div>
+      <div style="padding:14px;color:var(--text-2);font-size:12.5px;line-height:1.75">
+        여기서 정한 <b>본비번 + 카오스(색·대·소·미세)</b>로 앱(c-go-fuli.com) 입구에서 <b>무제한 입장</b>합니다.<br>
+        비번은 서버에 <b>해시</b>로만 저장돼 노출되지 않아요. 변경하려면 <b>현재 비번</b>이 필요합니다(최초 1회는 불필요).
+      </div>
+      <div style="padding:0 14px 16px">
+        <div id="mkStatus" style="font-size:12px;color:var(--gold);margin-bottom:14px">상태 확인 중...</div>
+        <label style="display:block;font-size:12px;color:var(--text-2);margin:8px 0 5px">새 본비번 (앱 로그인 때 입력)</label>
+        <input id="mkNew" type="text" placeholder="예: lee6606777" style="width:100%;padding:11px;border:1px solid rgba(212,168,67,.3);border-radius:10px;background:rgba(0,0,0,.25);color:#f0e6c8;font-size:14px;box-sizing:border-box;font-family:inherit">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px">
+          <div><div style="font-size:11px;color:var(--text-2);margin-bottom:3px">색(0-11)</div><input id="mkColor" type="number" min="0" max="11" value="6" style="width:100%;padding:9px;border:1px solid rgba(212,168,67,.3);border-radius:8px;background:rgba(0,0,0,.25);color:#f0e6c8;box-sizing:border-box;font-family:inherit"></div>
+          <div><div style="font-size:11px;color:var(--text-2);margin-bottom:3px">대(0-10)</div><input id="mkBig" type="number" min="0" max="10" value="6" style="width:100%;padding:9px;border:1px solid rgba(212,168,67,.3);border-radius:8px;background:rgba(0,0,0,.25);color:#f0e6c8;box-sizing:border-box;font-family:inherit"></div>
+          <div><div style="font-size:11px;color:var(--text-2);margin-bottom:3px">소(0-10)</div><input id="mkSmall" type="number" min="0" max="10" value="0" style="width:100%;padding:9px;border:1px solid rgba(212,168,67,.3);border-radius:8px;background:rgba(0,0,0,.25);color:#f0e6c8;box-sizing:border-box;font-family:inherit"></div>
+          <div><div style="font-size:11px;color:var(--text-2);margin-bottom:3px">미세(0-10)</div><input id="mkMicro" type="number" min="0" max="10" value="6" style="width:100%;padding:9px;border:1px solid rgba(212,168,67,.3);border-radius:8px;background:rgba(0,0,0,.25);color:#f0e6c8;box-sizing:border-box;font-family:inherit"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:5px">※ "바6606" = 색6·대6·소0·미세6 (앱 카오스 슬라이더와 같은 값)</div>
+        <label style="display:block;font-size:12px;color:var(--text-2);margin:16px 0 5px">현재 비번 (변경 시 필요 · 최초 설정은 비워두기)</label>
+        <input id="mkCur" type="text" placeholder="처음이면 비워두세요" style="width:100%;padding:11px;border:1px solid rgba(212,168,67,.3);border-radius:10px;background:rgba(0,0,0,.25);color:#f0e6c8;font-size:14px;box-sizing:border-box;font-family:inherit">
+        <button id="mkSaveBtn" style="margin-top:18px;width:100%;padding:13px;background:linear-gradient(135deg,#d4a843,#b8860b);border:none;border-radius:11px;color:#1a1206;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">💾 마스터키 저장</button>
+        <div id="mkMsg" style="margin-top:13px;font-size:13px;min-height:18px;line-height:1.5"></div>
+      </div>
+    </div>
   </div>
 
   <div class="footer-engrave">
@@ -2043,6 +2070,63 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
 
   setTimeout(window._cgoDrawAcct, 1500);
   setInterval(function(){ if(mode()==='real') window._cgoDrawAcct(); }, 30000);
+})();
+</script>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   🔑 마스터키 설정 — set_master_config / get_master_meta RPC
+   여기서 저장한 본비번·카오스로 앱(c-go-fuli.com)이 무제한 통과
+   ════════════════════════════════════════════════════════════ */
+(function(){
+  var SB_URL='https://vtqejikgqsmaulkayekv.supabase.co';
+  var SB_KEY='sb_publishable_dF_1MT-oQzFqWOk64CUHQQ_64qjcIYL';
+  var _mkSb=null;
+  function sb(){ if(_mkSb) return _mkSb; if(!window.supabase) return null; try{ _mkSb=window.supabase.createClient(SB_URL,SB_KEY); }catch(e){} return _mkSb; }
+  async function sha(s){ try{ var b=new TextEncoder().encode(String(s)); var h=await crypto.subtle.digest('SHA-256',b); return Array.from(new Uint8Array(h)).map(function(x){return ('0'+x.toString(16)).slice(-2);}).join(''); }catch(e){ return ''; } }
+  function val(id){ var e=document.getElementById(id); return e?e.value:''; }
+  function num(id){ var e=document.getElementById(id); return e?(parseInt(e.value,10)||0):0; }
+  function msg(t,ok){ var m=document.getElementById('mkMsg'); if(!m)return; m.textContent=t; m.style.color=ok?'#34d399':'#f87171'; }
+  function refreshStatus(){
+    var s=sb(); var el=document.getElementById('mkStatus'); if(!el)return;
+    if(!s){ el.textContent='⚠ 서버 연결 객체 없음 (supabase-js 로드 확인)'; return; }
+    s.rpc('get_master_meta').then(function(r){
+      if(r&&!r.error&&r.data){
+        var d=r.data;
+        if(d.set){ el.textContent='✅ 현재 마스터키 설정됨 (카오스 좌표 '+(d.coord||0)+' · 색 '+(d.color||0)+') — 변경하려면 현재 비번 입력'; }
+        else { el.textContent='ℹ️ 아직 마스터키 미설정 — 최초 설정은 현재 비번 없이 저장됩니다'; }
+      } else { el.textContent='⚠ 상태 조회 실패 — master_config_setup.sql 적용 확인'; }
+    }).catch(function(){ el.textContent='⚠ 상태 조회 오류'; });
+  }
+  async function save(){
+    var s=sb(); if(!s){ msg('서버 연결 객체 없음',false); return; }
+    var np=val('mkNew').trim();
+    if(np.length<2){ msg('새 본비번을 2자 이상 입력하세요',false); return; }
+    var coord=num('mkBig')*1000000+num('mkSmall')*1000+num('mkMicro');
+    var color=num('mkColor');
+    var newHash=await sha(np);
+    if(!newHash){ msg('해시 생성 실패 (브라우저 보안 컨텍스트 확인)',false); return; }
+    var curRaw=val('mkCur').trim();
+    var curHash=curRaw?(await sha(curRaw)):null;
+    var btn=document.getElementById('mkSaveBtn'); if(btn){btn.disabled=true;btn.textContent='저장 중...';}
+    s.rpc('set_master_config',{p_cur_hash:curHash,p_new_hash:newHash,p_coord:coord,p_color:color}).then(function(r){
+      if(btn){btn.disabled=false;btn.textContent='💾 마스터키 저장';}
+      if(r&&!r.error&&r.data&&r.data.ok){
+        msg('✅ '+(r.data.msg||'저장 완료')+' — 이제 앱 입구에서 이 비번으로 무제한 입장',true);
+        var c=document.getElementById('mkCur'); if(c) c.value='';
+        refreshStatus();
+      } else {
+        var em=(r&&r.data&&r.data.msg)||(r&&r.error&&r.error.message)||'저장 실패';
+        msg('❌ '+em,false);
+      }
+    }).catch(function(e){ if(btn){btn.disabled=false;btn.textContent='💾 마스터키 저장';} msg('❌ 오류: '+e,false); });
+  }
+  function init(){
+    var b=document.getElementById('mkSaveBtn'); if(b) b.addEventListener('click',save);
+    document.querySelectorAll('.tab').forEach(function(t){ if(t.dataset && t.dataset.tab==='master'){ t.addEventListener('click',refreshStatus); } });
+    refreshStatus();
+  }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',init); } else { init(); }
 })();
 </script>
 </body>
