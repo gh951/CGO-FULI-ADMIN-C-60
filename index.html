@@ -853,6 +853,7 @@ body::before{content:'';position:fixed;inset:0;background:
         <div style="background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.18);border-radius:12px;padding:14px">
           <div style="font-size:13px;font-weight:800;color:#f87171;margin-bottom:10px">🧾 지출 추가</div>
           <select id="expCat" style="width:100%;margin-bottom:8px;padding:10px;background:#0f1830;border:1px solid rgba(255,255,255,.12);border-radius:9px;color:#e7eefc;font-size:13px;font-family:inherit;box-sizing:border-box"><option>서버비</option><option>도메인</option><option>API비</option><option>앱등록(구글·애플)</option><option>카드 수수료</option><option>법인세</option><option>기타</option></select>
+          <select id="expCur" style="width:100%;margin-bottom:8px;padding:10px;background:#0f1830;border:1px solid rgba(255,255,255,.12);border-radius:9px;color:#e7eefc;font-size:13px;font-family:inherit;box-sizing:border-box"><option value="KRW">₩ 원 (KRW)</option><option value="USD">$ 달러 (USD)</option><option value="EUR">€ 유로 (EUR)</option><option value="JPY">¥ 엔 (JPY)</option></select>
           <input id="expAmt" type="number" inputmode="numeric" placeholder="금액 (원)" style="width:100%;margin-bottom:8px;padding:10px;background:#0f1830;border:1px solid rgba(255,255,255,.12);border-radius:9px;color:#e7eefc;font-size:13px;font-family:inherit;box-sizing:border-box">
           <input id="expMemo" type="text" placeholder="메모 (예: Vercel 6월)" style="width:100%;margin-bottom:10px;padding:10px;background:#0f1830;border:1px solid rgba(255,255,255,.12);border-radius:9px;color:#e7eefc;font-size:13px;font-family:inherit;box-sizing:border-box">
           <button onclick="acctAddExpense()" style="width:100%;padding:11px;border:none;border-radius:10px;color:#fff;font-weight:800;cursor:pointer;font-family:inherit;background:linear-gradient(135deg,#dc2626,#f87171)">+ 지출 저장</button>
@@ -860,12 +861,17 @@ body::before{content:'';position:fixed;inset:0;background:
         <div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.18);border-radius:12px;padding:14px">
           <div style="font-size:13px;font-weight:800;color:#34d399;margin-bottom:10px">💰 수입 추가</div>
           <select id="revSrc" style="width:100%;margin-bottom:8px;padding:10px;background:#0f1830;border:1px solid rgba(255,255,255,.12);border-radius:9px;color:#e7eefc;font-size:13px;font-family:inherit;box-sizing:border-box"><option>구독 PREMIUM</option><option>구독 VVIP</option><option>CGO 오행 쇼핑</option><option>기타</option></select>
+          <select id="revCur" style="width:100%;margin-bottom:8px;padding:10px;background:#0f1830;border:1px solid rgba(255,255,255,.12);border-radius:9px;color:#e7eefc;font-size:13px;font-family:inherit;box-sizing:border-box"><option value="KRW">₩ 원 (KRW)</option><option value="USD">$ 달러 (USD)</option><option value="EUR">€ 유로 (EUR)</option><option value="JPY">¥ 엔 (JPY)</option></select>
           <input id="revAmt" type="number" inputmode="numeric" placeholder="금액 (원)" style="width:100%;margin-bottom:8px;padding:10px;background:#0f1830;border:1px solid rgba(255,255,255,.12);border-radius:9px;color:#e7eefc;font-size:13px;font-family:inherit;box-sizing:border-box">
           <input id="revCountry" type="text" placeholder="국가코드 (예: +82, 선택)" style="width:100%;margin-bottom:10px;padding:10px;background:#0f1830;border:1px solid rgba(255,255,255,.12);border-radius:9px;color:#e7eefc;font-size:13px;font-family:inherit;box-sizing:border-box">
           <button onclick="acctAddRevenue()" style="width:100%;padding:11px;border:none;border-radius:10px;color:#fff;font-weight:800;cursor:pointer;font-family:inherit;background:linear-gradient(135deg,#0d9488,#34d399)">+ 수입 저장</button>
         </div>
       </div>
       <div id="acctAddMsg" style="margin-top:12px;font-size:12px;color:#9aa6bf;min-height:18px"></div>
+    </div>
+    <div class="panel" style="margin-top:20px">
+      <div class="panel-title"><div class="panel-title-left">📋 입력 내역 (삭제 가능)</div><div class="panel-badge">최근 100건</div></div>
+      <div id="acctRowsList" class="country-list"></div>
     </div>
   </div>
 
@@ -1875,6 +1881,8 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
   function _esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]; }); }
   function _sbc(){ if(_sb)return _sb; if(!window.supabase)return null; try{ _sb=window.supabase.createClient(SB_URL,SB_KEY); }catch(e){} return _sb; }
   function won(n){ return '₩'+(Math.round(+n||0)).toLocaleString(); }
+  function curSym(c){ return ({KRW:'₩',USD:'$',EUR:'€',JPY:'¥'})[c||'KRW']||'₩'; }
+  function money(n,c){ return curSym(c)+(Math.round(+n||0)).toLocaleString(); }
   function mode(){ return (typeof _cgoMode==='function')?_cgoMode():'demo'; }
   function T(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; }
 
@@ -1932,9 +1940,10 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
     setKpis(cur.rev,cur.exp); drawChart(d.monthly);
     drawList('acctExpList',d.by_category,'cat'); drawList('acctRevList',d.by_source,'src');
     badge(false); T('acctRevSub','데모 시연값');
+    var rl=document.getElementById('acctRowsList'); if(rl) rl.innerHTML='<div style="padding:12px;color:#7b8aa0;font-size:12px;text-align:center">본 서버 모드에서 입력 내역이 표시됩니다</div>';
   }
   function paintReal(){
-    badge(true); T('acctRevSub','본 서버 조회 중…');
+    badge(true); T('acctRevSub','본 서버 조회 중…'); fetchRows();
     var sb=_sbc();
     if(!sb){ setKpis(0,0); drawChart([]); drawList('acctExpList',[],'cat'); drawList('acctRevList',[],'src'); T('acctRevSub','연결 객체 없음'); return; }
     sb.rpc('get_accounting_stats').then(function(r){
@@ -1963,7 +1972,7 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
     if(!(amt>0)){ _amsg('금액을 0보다 큰 숫자로 입력하세요',false); return; }
     if(!_askPin()){ _amsg('PIN 불일치 — 저장 취소',false); return; }
     _amsg('저장 중…',true);
-    sb.from('expenses').insert({ category:_gv('expCat')||'기타', amount:amt, currency:'KRW', memo:_gv('expMemo')||null }).then(function(r){
+    sb.from('expenses').insert({ category:_gv('expCat')||'기타', amount:amt, currency:(_gv('expCur')||'KRW'), memo:_gv('expMemo')||null }).then(function(r){
       if(r.error){ console.warn('[C-61 ACCT] exp',r.error); _amsg('저장 실패: '+(r.error.message||'권한/제약 확인 · SQL 먼저 Run'),false); return; }
       _amsg('✅ 지출 저장됨 · ₩'+amt.toLocaleString()+' (본 서버 모드에서 반영)',true);
       _clr(['expAmt','expMemo']); try{ paintReal(); }catch(e){}
@@ -1975,10 +1984,45 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
     if(!(amt>0)){ _amsg('금액을 0보다 큰 숫자로 입력하세요',false); return; }
     if(!_askPin()){ _amsg('PIN 불일치 — 저장 취소',false); return; }
     _amsg('저장 중…',true);
-    sb.from('revenues').insert({ amount:amt, currency:'KRW', source:_gv('revSrc')||'기타', country:_gv('revCountry')||null }).then(function(r){
+    sb.from('revenues').insert({ amount:amt, currency:(_gv('revCur')||'KRW'), source:_gv('revSrc')||'기타', country:_gv('revCountry')||null }).then(function(r){
       if(r.error){ console.warn('[C-61 ACCT] rev',r.error); _amsg('저장 실패: '+(r.error.message||'권한/제약 확인 · SQL 먼저 Run'),false); return; }
-      _amsg('✅ 수입 저장됨 · ₩'+amt.toLocaleString()+' (본 서버 모드에서 반영)',true);
+      _amsg('✅ 수입 저장됨 · '+money(amt,_gv('revCur'))+' (본 서버 모드에서 반영)',true);
       _clr(['revAmt','revCountry']); try{ paintReal(); }catch(e){}
+    });
+  };
+
+  /* ── 입력 내역 목록 + 삭제 ── */
+  function fetchRows(){
+    var el=document.getElementById('acctRowsList'); if(!el)return;
+    var sb=_sbc(); if(!sb){ el.innerHTML=''; return; }
+    sb.rpc('get_acct_rows').then(function(r){
+      if(r.error){ el.innerHTML='<div style="padding:12px;color:#7b8aa0;font-size:12px;text-align:center">목록 함수 미설치 — SQL(v2) 먼저 Run</div>'; return; }
+      var d=r.data||{}, ex=d.expenses||[], rv=d.revenues||[];
+      if(!ex.length && !rv.length){ el.innerHTML='<div style="padding:12px;color:#7b8aa0;font-size:12px;text-align:center">입력된 내역 없음</div>'; return; }
+      function row(kind,color,label,id,name,amt,cur,when){
+        return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
+          +'<span style="flex:0 0 42px;font-size:10px;font-weight:800;color:'+color+'">'+label+'</span>'
+          +'<span style="flex:1;font-size:12px;color:#cdd7e6;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_esc(name||'-')+'</span>'
+          +'<span style="flex:0 0 108px;text-align:right;font-size:12px;font-weight:700;color:'+color+'">'+money(amt,cur)+'</span>'
+          +'<span style="flex:0 0 70px;text-align:right;font-size:10px;color:#7b8aa0">'+_esc(String(when||'').slice(0,10))+'</span>'
+          +'<button onclick="acctDelete(\''+kind+'\',\''+_esc(id)+'\')" title="삭제" style="flex:0 0 32px;margin-left:4px;background:rgba(248,113,113,.15);border:none;border-radius:7px;color:#f87171;cursor:pointer;padding:6px 0;font-size:13px">🗑</button>'
+          +'</div>';
+      }
+      var html='';
+      ex.forEach(function(e){ html+=row('expenses','#f87171','지출',e.id,e.category||e.memo,e.amount,e.currency,e.spent_at); });
+      rv.forEach(function(v){ html+=row('revenues','#34d399','수입',v.id,v.source||v.country,v.amount,v.currency,v.paid_at); });
+      el.innerHTML=html;
+    });
+  }
+  window.acctDelete=function(kind,id){
+    if(!id) return;
+    if(!confirm('이 내역을 삭제할까요? (되돌릴 수 없음)')) return;
+    if(!_askPin()){ _amsg('PIN 불일치 — 삭제 취소',false); return; }
+    var sb=_sbc(); if(!sb){ _amsg('서버 연결 객체 없음',false); return; }
+    _amsg('삭제 중…',true);
+    sb.from(kind).delete().eq('id',id).then(function(r){
+      if(r.error){ console.warn('[C-61 ACCT] del',r.error); _amsg('삭제 실패: '+(r.error.message||'삭제 권한 확인 · SQL(v2) Run'),false); return; }
+      _amsg('🗑 삭제됨',true); try{ paintReal(); }catch(e){}
     });
   };
 
