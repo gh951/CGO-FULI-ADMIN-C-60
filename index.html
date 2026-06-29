@@ -561,6 +561,7 @@ body::before{content:'';position:fixed;inset:0;background:
 .world-zoom-hint{position:absolute;bottom:8px;left:8px;font-family:'Orbitron',sans-serif;font-size:9px;color:var(--text-3);background:rgba(13,20,38,0.7);padding:4px 10px;border-radius:6px;border:1px solid var(--border);pointer-events:none;letter-spacing:0.05em;user-select:none;z-index:9}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 </head>
 <body>
 
@@ -1468,8 +1469,9 @@ function rouletteStop() {
   document.getElementById('caughtWord').textContent = chaosCaught;
 
   // ★ 大將 본인 도우미 — 등록한 비번 + 형식 + 예시 답 보여주기 ★
-  const helperPass = localStorage.getItem('mufe_user_passcode');
-  const helperFmt = localStorage.getItem('mufe_user_format');
+  function _qvUnseal(v){ try{ if(typeof v==='string'&&v.indexOf('QV1::')===0&&window.CryptoJS){ var k=localStorage.getItem('__fuli_qv_k'); if(k){ var pt=CryptoJS.AES.decrypt(v.slice(5),k).toString(CryptoJS.enc.Utf8); return pt||v; } } }catch(e){} return v; }
+  const helperPass = _qvUnseal(localStorage.getItem('mufe_user_passcode'));
+  const helperFmt = _qvUnseal(localStorage.getItem('mufe_user_format'));
   if (helperPass && helperFmt) {
     document.getElementById('hintPass').textContent = helperPass;
     const fmtLabels = {
