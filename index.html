@@ -1776,6 +1776,8 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
   function setT(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; }
   var _sbClient=null;
   function _getSb(){ if(_sbClient) return _sbClient; if(!window.supabase) return null; try{ _sbClient=window.supabase.createClient(SB_URL,SB_KEY); }catch(e){} return _sbClient; }
+  // C-60: XSS 방어 — DB 문자열(country 등)을 innerHTML에 넣기 전 이스케이프 (외부인 INSERT 대비)
+  function _esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]; }); }
   function fillReal(){
     if(_cgoMode()!=='real') return;
     var sb=_getSb(); if(!sb) return;
@@ -1794,7 +1796,7 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
         else{
           var max=Math.max.apply(null,arr.map(function(c){return c.count;}))||1;
           cl.innerHTML=arr.map(function(c){
-            var nm=GEO[c.country]||c.country||'(미상)';
+            var nm=_esc(GEO[c.country]||c.country||'(미상)');
             var pct=Math.round(c.count/max*100);
             return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);"><span style="flex:0 0 90px;font-size:12px;color:#cdd7e6;">'+nm+'</span><span style="flex:1;height:7px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;"><span style="display:block;height:100%;width:'+pct+'%;background:linear-gradient(90deg,#d4af37,#f0d98a);"></span></span><span style="flex:0 0 34px;text-align:right;font-size:12px;font-weight:700;color:#f0d98a;">'+c.count+'</span></div>';
           }).join('');
