@@ -797,7 +797,7 @@ body::before{content:'';position:fixed;inset:0;background:
         <div class="panel-title"><div class="panel-title-left">🌍 실시간 세계 사용자 분포</div><div class="panel-badge" id="dotCountBadge">0 active</div></div>
         <div class="world-wrap" id="worldWrap"><div class="world-bg" id="worldBg"></div><svg class="world-overlay" id="worldSvg" viewBox="0 0 1600 893" preserveAspectRatio="xMidYMid slice"></svg><div class="world-popup" id="worldPopup"></div><div class="world-zoom-hint">📱 핀치 / 🖱 휠 줌 · 드래그 이동 · 더블탭 리셋</div></div>
       </div>
-      <div class="panel"><div class="panel-title"><div class="panel-title-left">📊 국가별 TOP 15</div></div><div class="country-list" id="countryList"></div></div>
+      <div class="panel"><div class="panel-title"><div class="panel-title-left">📍 지역·국가별 TOP 15</div></div><div class="country-list" id="countryList"></div></div>
     </div>
     <div class="panel" style="margin-bottom:20px">
       <div class="panel-title"><div class="panel-title-left">💎 구독 등급 분포</div><div class="panel-badge" id="totalUserBadge">총 0명</div></div>
@@ -1880,6 +1880,65 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
   var GEO={'+82':'대한민국','+1':'미국','+44':'영국','+86':'중국','+852':'홍콩','+81':'일본','+7':'러시아','+91':'인도','+84':'베트남','+66':'태국','+62':'인도네시아','+60':'말레이시아','+63':'필리핀','+49':'독일','+33':'프랑스','+34':'스페인','+39':'이탈리아','+31':'네덜란드','+55':'브라질','+90':'터키','+966':'사우디','+380':'우크라이나'};
   var GEO2={'+82':{x:1115,y:340,f:'🇰🇷'},'+81':{x:1200,y:350,f:'🇯🇵'},'+1':{x:1450,y:380,f:'🇺🇸'},'+86':{x:1030,y:380,f:'🇨🇳'},'+852':{x:1095,y:405,f:'🇭🇰'},'+84':{x:1080,y:450,f:'🇻🇳'},'+91':{x:900,y:430,f:'🇮🇳'},'+62':{x:1120,y:560,f:'🇮🇩'},'+60':{x:1075,y:545,f:'🇲🇾'},'+63':{x:1185,y:470,f:'🇵🇭'},'+66':{x:1030,y:460,f:'🇹🇭'},'+49':{x:600,y:320,f:'🇩🇪'},'+33':{x:560,y:340,f:'🇫🇷'},'+44':{x:540,y:300,f:'🇬🇧'},'+34':{x:540,y:360,f:'🇪🇸'},'+39':{x:620,y:360,f:'🇮🇹'},'+31':{x:585,y:315,f:'🇳🇱'},'+7':{x:850,y:250,f:'🇷🇺'},'+90':{x:720,y:370,f:'🇹🇷'},'+966':{x:780,y:430,f:'🇸🇦'},'+380':{x:700,y:310,f:'🇺🇦'},'+55':{x:1620,y:620,f:'🇧🇷'}};
   var ML={email:'📧 이메일',phone:'📱 전화',google:'🟦 Google',apple:'🍎 Apple',facebook:'📘 Facebook',yahoo:'Y! Yahoo',kakao:'💬 카카오',naver:'Ⓝ 네이버',line:'💚 LINE',wechat:'💬 WeChat',alipay:'🅰️ Alipay',vk:'Ⓥ VK',yandex:'Я Yandex',zalo:'🇿 Zalo',unknown:'기타'};
+  // 📍 GPS 좌표 → 한국 시/도·시 (가장 가까운 대표 도시). 한국 밖이면 대략 국가.
+  var KR_CITIES=[
+    {n:'서울',la:37.5665,lo:126.9780},{n:'인천',la:37.4563,lo:126.7052},{n:'수원',la:37.2636,lo:127.0286},
+    {n:'성남',la:37.4200,lo:127.1267},{n:'고양',la:37.6584,lo:126.8320},{n:'춘천',la:37.8813,lo:127.7298},
+    {n:'강릉',la:37.7519,lo:128.8761},{n:'대전',la:36.3504,lo:127.3845},{n:'세종',la:36.4801,lo:127.2890},
+    {n:'청주',la:36.6424,lo:127.4890},{n:'천안',la:36.8151,lo:127.1139},{n:'전주',la:35.8242,lo:127.1480},
+    {n:'군산',la:35.9676,lo:126.7370},{n:'광주',la:35.1595,lo:126.8526},{n:'목포',la:34.8118,lo:126.3922},
+    {n:'대구',la:35.8714,lo:128.6014},{n:'포항',la:36.0190,lo:129.3435},{n:'부산',la:35.1796,lo:129.0756},
+    {n:'울산',la:35.5384,lo:129.3114},{n:'창원',la:35.2280,lo:128.6811},{n:'진주',la:35.1800,lo:128.1076},
+    {n:'제주',la:33.4996,lo:126.5312}
+  ];
+  function krCity(la,lo){
+    if(la<32.5||la>39.6||lo<124||lo>132) return null;   // 한국 대략 범위 밖
+    var best=null,bd=1e18;
+    for(var i=0;i<KR_CITIES.length;i++){ var c=KR_CITIES[i]; var dla=la-c.la,dlo=lo-c.lo; var d=dla*dla+dlo*dlo; if(d<bd){bd=d;best=c;} }
+    return best?best.n:null;
+  }
+  function worldCountry(la,lo){   // 한국 외 대략 (정확도 한계 있음)
+    if(la>=30&&la<=46&&lo>=129&&lo<=146) return '일본';
+    if(la>=18&&la<=54&&lo>=73&&lo<=135)  return '중국';
+    if(la>=8&&la<=24&&lo>=102&&lo<=110)  return '베트남';
+    if(la>=5&&la<=21&&lo>=97&&lo<=106)   return '태국';
+    if(la>=-11&&la<=6&&lo>=95&&lo<=141)  return '인도네시아';
+    if(la>=6&&la<=21&&lo>=116&&lo<=127)  return '필리핀';
+    if(la>=8&&la<=37&&lo>=68&&lo<=97)    return '인도';
+    if(la>=24&&la<=50&&lo>=-125&&lo<=-66)return '미국';
+    if(la>=36&&la<=71&&lo>=-11&&lo<=40)  return '유럽';
+    return null;
+  }
+  function regionLabel(la,lo){
+    var c=krCity(la,lo);
+    if(c) return '대한민국('+c+')';
+    var w=worldCountry(la,lo);
+    if(w) return w;
+    return '기타('+la.toFixed(1)+', '+lo.toFixed(1)+')';
+  }
+  function fillRegions(){   // GPS 데이터 있으면 countryList를 지역별로 덮어씀
+    var sb=_getSb(); if(!sb) return;
+    sb.rpc('get_region_stats').then(function(r){
+      if(r.error||!r.data||!r.data.length) return;   // 없으면 기존 국가별 유지
+      var agg={};
+      r.data.forEach(function(row){
+        var la=parseFloat(row.lat), lo=parseFloat(row.lng), cnt=parseInt(row.cnt,10)||1;
+        if(isNaN(la)||isNaN(lo)) return;
+        var label=regionLabel(la,lo);
+        agg[label]=(agg[label]||0)+cnt;
+      });
+      var arr=Object.keys(agg).map(function(k){ return {name:k,count:agg[k]}; });
+      if(!arr.length) return;
+      arr.sort(function(a,b){ return b.count-a.count; });
+      arr=arr.slice(0,15);
+      var cl=document.getElementById('countryList'); if(!cl) return;
+      var max=Math.max.apply(null,arr.map(function(c){return c.count;}))||1;
+      cl.innerHTML=arr.map(function(c){
+        var pct=Math.round(c.count/max*100);
+        return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);"><span style="flex:0 0 130px;font-size:12px;color:#cdd7e6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_esc(c.name)+'</span><span style="flex:1;height:7px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;"><span style="display:block;height:100%;width:'+pct+'%;background:linear-gradient(90deg,#d4af37,#f0d98a);"></span></span><span style="flex:0 0 34px;text-align:right;font-size:12px;font-weight:700;color:#f0d98a;">'+c.count+'</span></div>';
+      }).join('');
+    }).catch(function(e){ console.warn('[region]',e); });
+  }
   function setT(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; }
   var _sbClient=null;
   function _getSb(){ if(_sbClient) return _sbClient; if(!window.supabase) return null; try{ _sbClient=window.supabase.createClient(SB_URL,SB_KEY); }catch(e){} return _sbClient; }
@@ -1909,6 +1968,8 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
           }).join('');
         }
       }
+      // 📍 GPS 지역 데이터가 있으면 위 목록을 "대한민국(전주)" 식 지역별로 덮어씀
+      try{ fillRegions(); }catch(e){ console.warn('[region]',e); }
       // 🌍 실시간 지도 점 — 목록과 같은 실데이터로 (위치 미상은 '(미상)' 자리에 표시)
       try{
         var dots=(s.by_country||[]).map(function(c,i){
