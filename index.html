@@ -1981,7 +1981,20 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
       }catch(e){ console.warn('[C-60 SB] world',e); }
       console.log('[C-60 SB] ✅ 실데이터 로드: 총',s.total,'· 오늘',s.today);
     });
+    try{ fillLive(); }catch(e){}
   }
+  // 🔴 실시간 접속자 (하트비트 기반 — 90초 무신호 시 빠짐)
+  function fillLive(){
+    if(_cgoMode()!=='real') return;
+    var sb=_getSb(); if(!sb) return;
+    sb.rpc('get_live_stats').then(function(r){
+      if(r&&!r.error&&r.data){
+        setT('kpiLive', r.data.live_total||0);
+        var dd=document.getElementById('kpiLiveDelta'); if(dd) dd.textContent='실시간 접속 중';
+      }
+    }).catch(function(){});
+  }
+  try{ setInterval(function(){ try{ fillLive(); }catch(e){} }, 20000); }catch(e){}
   // 모드 토글
   window._cgoToggleMode=function(){
     try{
