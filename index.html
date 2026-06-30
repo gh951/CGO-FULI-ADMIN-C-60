@@ -798,7 +798,12 @@ body::before{content:'';position:fixed;inset:0;background:
         <div class="panel-title"><div class="panel-title-left">🌍 실시간 세계 사용자 분포</div><div class="panel-badge" id="dotCountBadge">0 active</div></div>
         <div class="world-wrap" id="worldWrap"><div class="world-bg" id="worldBg"></div><svg class="world-overlay" id="worldSvg" viewBox="0 0 1600 893" preserveAspectRatio="xMidYMid slice"></svg><div class="world-popup" id="worldPopup"></div><div class="world-zoom-hint">📱 핀치 / 🖱 휠 줌 · 드래그 이동 · 더블탭 리셋</div></div>
       </div>
-      <div class="panel"><div class="panel-title"><div class="panel-title-left">📍 지역·국가별 TOP 15</div></div><div class="country-list" id="countryList"></div></div>
+      <div class="panel"><div class="panel-title"><div class="panel-title-left">📍 지역별 TOP 15</div><div id="regTabs" style="display:flex;gap:4px">
+        <button class="regtab" data-rmode="live" style="padding:5px 10px;border-radius:7px;border:1px solid rgba(212,168,67,.4);background:rgba(212,168,67,.22);color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">실시간</button>
+        <button class="regtab" data-rmode="day" style="padding:5px 10px;border-radius:7px;border:1px solid rgba(212,168,67,.25);background:transparent;color:var(--text-2);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">오늘</button>
+        <button class="regtab" data-rmode="month" style="padding:5px 10px;border-radius:7px;border:1px solid rgba(212,168,67,.25);background:transparent;color:var(--text-2);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">이번달</button>
+        <button class="regtab" data-rmode="year" style="padding:5px 10px;border-radius:7px;border:1px solid rgba(212,168,67,.25);background:transparent;color:var(--text-2);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">올해</button>
+      </div></div><div class="country-list" id="countryList"></div></div>
     </div>
     <div class="panel" style="margin-bottom:20px">
       <div class="panel-title"><div class="panel-title-left">💎 구독 등급 분포</div><div class="panel-badge" id="totalUserBadge">총 0명</div></div>
@@ -951,7 +956,14 @@ body::before{content:'';position:fixed;inset:0;background:
   <div class="tab-content" id="tab-diag">
     <div class="panel" style="max-width:620px">
       <div class="panel-title"><div class="panel-title-left">🔧 서버 진단 (실시간 점검)</div><button id="diagRunBtn" style="padding:7px 16px;background:linear-gradient(135deg,#5eead4,#0d9488);border:none;border-radius:9px;color:#04201c;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">▶ 진단 실행</button></div>
-      <div style="padding:16px"><div id="diagOut" style="font-size:13.5px;line-height:2;color:#cdd7e6">▶ "진단 실행" 버튼을 누르면 어디가 막혔는지 여기에 나옵니다.</div></div>
+      <div style="padding:16px"><div id="diagOut" style="font-size:13.5px;line-height:2;color:#cdd7e6">▶ "진단 실행" 버튼을 누르면 어디가 막혔는지 여기에 나옵니다.</div>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(212,168,67,.18);display:flex;gap:8px;flex-wrap:wrap">
+          <button id="purgeSeoulBtn" style="padding:8px 14px;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);border-radius:9px;color:#f87171;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🧹 서울 잘못된 데이터 정리</button>
+          <button id="purgePresBtn" style="padding:8px 14px;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.35);border-radius:9px;color:#f87171;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🧹 테스트 접속 정리</button>
+          <button id="rollupBtn" style="padding:8px 14px;background:rgba(94,234,212,.14);border:1px solid rgba(94,234,212,.4);border-radius:9px;color:#5eead4;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">📦 집계 실행(일/월/년)</button>
+        </div>
+        <div id="purgeOut" style="margin-top:12px;font-size:13px;min-height:18px;color:#cdd7e6"></div>
+      </div>
     </div>
   </div>
 
@@ -1924,29 +1936,40 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
     if(w) return w;
     return '기타('+la.toFixed(1)+', '+lo.toFixed(1)+')';
   }
-  function fillRegions(){   // GPS 데이터 있으면 countryList를 지역별로 덮어씀
-    var sb=_getSb(); if(!sb) return;
-    sb.rpc('get_region_stats').then(function(r){
-      if(r.error||!r.data||!r.data.length) return;   // 없으면 기존 국가별 유지
-      var agg={};
-      r.data.forEach(function(row){
-        var la=parseFloat(row.lat), lo=parseFloat(row.lng), cnt=parseInt(row.cnt,10)||1;
-        if(isNaN(la)||isNaN(lo)) return;
-        var label=regionLabel(la,lo);
-        agg[label]=(agg[label]||0)+cnt;
-      });
-      var arr=Object.keys(agg).map(function(k){ return {name:k,count:agg[k]}; });
-      if(!arr.length) return;
-      arr.sort(function(a,b){ return b.count-a.count; });
-      arr=arr.slice(0,15);
-      var cl=document.getElementById('countryList'); if(!cl) return;
-      var max=Math.max.apply(null,arr.map(function(c){return c.count;}))||1;
-      cl.innerHTML=arr.map(function(c){
-        var pct=Math.round(c.count/max*100);
-        return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);"><span style="flex:0 0 130px;font-size:12px;color:#cdd7e6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_esc(c.name)+'</span><span style="flex:1;height:7px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;"><span style="display:block;height:100%;width:'+pct+'%;background:linear-gradient(90deg,#d4af37,#f0d98a);"></span></span><span style="flex:0 0 34px;text-align:right;font-size:12px;font-weight:700;color:#f0d98a;">'+c.count+'</span></div>';
-      }).join('');
-    }).catch(function(e){ console.warn('[region]',e); });
+  function paintRegions(arr){
+    var cl=document.getElementById('countryList'); if(!cl) return;
+    if(!arr||!arr.length){ cl.innerHTML='<div style="padding:14px;color:#7b8aa0;font-size:12px;text-align:center;">데이터 없음</div>'; return; }
+    arr.sort(function(a,b){ return b.count-a.count; });
+    arr=arr.slice(0,15);
+    var max=Math.max.apply(null,arr.map(function(c){return c.count;}))||1;
+    cl.innerHTML=arr.map(function(c){
+      var pct=Math.round(c.count/max*100);
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);"><span style="flex:0 0 130px;font-size:12px;color:#cdd7e6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_esc(c.name)+'</span><span style="flex:1;height:7px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;"><span style="display:block;height:100%;width:'+pct+'%;background:linear-gradient(90deg,#d4af37,#f0d98a);"></span></span><span style="flex:0 0 34px;text-align:right;font-size:12px;font-weight:700;color:#f0d98a;">'+c.count+'</span></div>';
+    }).join('');
   }
+  function drawRegionPanel(){
+    var sb=_getSb(); if(!sb) return;
+    var mode=window._regMode||'live';
+    if(mode==='live'){
+      sb.rpc('get_live_stats').then(function(r){
+        if(r.error||!r.data) return;
+        var agg={};
+        (r.data.by_region||[]).forEach(function(row){
+          var la=parseFloat(row.lat),lo=parseFloat(row.lng),cnt=parseInt(row.cnt,10)||1;
+          if(isNaN(la)||isNaN(lo)) return;
+          var label=regionLabel(la,lo);
+          agg[label]=(agg[label]||0)+cnt;
+        });
+        paintRegions(Object.keys(agg).map(function(k){ return {name:k,count:agg[k]}; }));
+      }).catch(function(e){ console.warn('[region]',e); });
+    } else {
+      sb.rpc('get_period_stats',{p_period:mode}).then(function(r){
+        if(r.error||!r.data||!r.data.ok) return;
+        paintRegions((r.data.regions||[]).map(function(x){ return {name:x.region,count:x.cnt}; }));
+      }).catch(function(e){ console.warn('[region]',e); });
+    }
+  }
+  function fillRegions(){ drawRegionPanel(); }
   function setT(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; }
   var _sbClient=null;
   function _getSb(){ if(_sbClient) return _sbClient; if(!window.supabase) return null; try{ _sbClient=window.supabase.createClient(SB_URL,SB_KEY); }catch(e){} return _sbClient; }
@@ -2002,7 +2025,23 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
       }
     }).catch(function(){});
   }
-  try{ setInterval(function(){ try{ fillLive(); }catch(e){} }, 20000); }catch(e){}
+  try{ setInterval(function(){ try{ fillLive(); if((window._regMode||'live')==='live') drawRegionPanel(); }catch(e){} }, 20000); }catch(e){}
+  // 지역 기간 토글 (실시간/오늘/이번달/올해)
+  window._regMode='live';
+  try{
+    var _rt=document.getElementById('regTabs');
+    if(_rt){ _rt.addEventListener('click',function(e){
+      var b=e.target.closest?e.target.closest('[data-rmode]'):null; if(!b) return;
+      window._regMode=b.getAttribute('data-rmode');
+      var all=_rt.querySelectorAll('.regtab');
+      for(var i=0;i<all.length;i++){ var on=all[i]===b;
+        all[i].style.background=on?'rgba(212,168,67,.22)':'transparent';
+        all[i].style.color=on?'var(--gold)':'var(--text-2)';
+        all[i].style.borderColor=on?'rgba(212,168,67,.4)':'rgba(212,168,67,.25)';
+      }
+      try{ drawRegionPanel(); }catch(e){}
+    }); }
+  }catch(e){}
   // 모드 토글
   window._cgoToggleMode=function(){
     try{
@@ -2374,7 +2413,17 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
     }
     if(btn){btn.disabled=false;btn.textContent='▶ 진단 실행';}
   }
-  function init(){ var b=document.getElementById('diagRunBtn'); if(b) b.addEventListener('click',run); }
+  function init(){ var b=document.getElementById('diagRunBtn'); if(b) b.addEventListener('click',run);
+    async function purge(kind,label){ var o=document.getElementById('purgeOut'); var s=sb(); if(!s){ if(o)o.textContent='연결 실패'; return; } if(!confirm(label+' — 실행할까요?')) return; if(o){o.textContent='정리 중...';o.style.color='#cdd7e6';}
+      try{ var r=await s.rpc('cgo_purge_region',{p_kind:kind}); if(r.error){ if(o){o.textContent='❌ '+r.error.message;o.style.color='#f87171';} } else { if(o){o.textContent='✅ '+(r.data.deleted||0)+'건 정리됨 — 지역 패널 새로고침하면 반영';o.style.color='#34d399';} } }catch(e){ if(o){o.textContent='❌ '+e;o.style.color='#f87171';} } }
+    async function rollup(){ var o=document.getElementById('purgeOut'); var s=sb(); if(!s){ if(o)o.textContent='연결 실패'; return; } if(o){o.textContent='집계 중...';o.style.color='#cdd7e6';}
+      try{ var r=await s.rpc('cgo_rollup'); if(r.error){ if(o){o.textContent='❌ '+r.error.message;o.style.color='#f87171';} } else { if(o){o.textContent='✅ 집계 완료 (옮김 '+(r.data.rolled||0)+'건, 원본정리 '+(r.data.cleaned||0)+'건)';o.style.color='#34d399';} } }catch(e){ if(o){o.textContent='❌ '+e;o.style.color='#f87171';} } }
+    var ps=document.getElementById('purgeSeoulBtn'); if(ps) ps.addEventListener('click',function(){ purge('seoul','서울 잘못된 누적 데이터 정리'); });
+    var pp=document.getElementById('purgePresBtn'); if(pp) pp.addEventListener('click',function(){ purge('presence','테스트 접속 기록 정리'); });
+    var rb=document.getElementById('rollupBtn'); if(rb) rb.addEventListener('click',rollup);
+    // admin 열 때 자동 집계+청소 1회 (무료 플랜 — 스케줄러 대신)
+    try{ var s2=sb(); if(s2) s2.rpc('cgo_rollup'); }catch(e){}
+  }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
 })();
 </script>
