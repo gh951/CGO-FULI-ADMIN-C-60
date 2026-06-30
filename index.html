@@ -783,6 +783,7 @@ body::before{content:'';position:fixed;inset:0;background:
     <div class="tab" data-tab="features">⚡ 기능 분석</div>
     <div class="tab" data-tab="live">🔴 실시간 로그</div>
     <div class="tab" data-tab="master">🔑 마스터키</div>
+    <div class="tab" data-tab="diag">🔧 서버 진단</div>
   </div>
 
   <div class="tab-content active" id="tab-overview">
@@ -944,6 +945,13 @@ body::before{content:'';position:fixed;inset:0;background:
         <div id="gkListMsg" style="font-size:12px;color:var(--text-2);margin-bottom:12px">본 마스터키를 저장하면 목록이 자동으로 표시됩니다</div>
         <div id="gkList"></div>
       </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-diag">
+    <div class="panel" style="max-width:620px">
+      <div class="panel-title"><div class="panel-title-left">🔧 서버 진단 (실시간 점검)</div><button id="diagRunBtn" style="padding:7px 16px;background:linear-gradient(135deg,#5eead4,#0d9488);border:none;border-radius:9px;color:#04201c;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">▶ 진단 실행</button></div>
+      <div style="padding:16px"><div id="diagOut" style="font-size:13.5px;line-height:2;color:#cdd7e6">▶ "진단 실행" 버튼을 누르면 어디가 막혔는지 여기에 나옵니다.</div></div>
     </div>
   </div>
 
@@ -2310,6 +2318,64 @@ console.log('%cC-60 · PCT 10-2026-0060113','font-size:11px;color:rgba(200,185,1
     if(adminHash()) gkLoad();
   }
   if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',init); } else { init(); }
+})();
+</script>
+
+<script>
+/* 🔧 서버 진단 — 버튼 한 번으로 실시간/신호/지역 함수 점검 (SQL·콘솔 불필요) */
+(function(){
+  var SB_URL='https://vtqejikgqsmaulkayekv.supabase.co';
+  var SB_KEY='sb_publishable_dF_1MT-oQzFqWOk64CUHQQ_64qjcIYL';
+  var _ds=null;
+  function sb(){ if(_ds)return _ds; if(!window.supabase)return null; try{_ds=window.supabase.createClient(SB_URL,SB_KEY);}catch(e){} return _ds; }
+  function ln(t){ var o=document.getElementById('diagOut'); if(o) o.innerHTML+=t+'<br>'; }
+  function clr(){ var o=document.getElementById('diagOut'); if(o) o.innerHTML=''; }
+  async function run(){
+    clr();
+    var btn=document.getElementById('diagRunBtn'); if(btn){btn.disabled=true;btn.textContent='점검 중...';}
+    var s=sb();
+    if(!s){ ln('❌ 서버 연결 실패 (supabase-js 로드 안 됨)'); if(btn){btn.disabled=false;btn.textContent='▶ 진단 실행';} return; }
+    ln('✅ 1. 서버 연결됨');
+    // 2) 실시간 조회 함수
+    var liveOk=false;
+    try{
+      var lr=await s.rpc('get_live_stats');
+      if(lr.error){ ln('❌ 2. 실시간 조회 함수 오류: '+lr.error.message); }
+      else { liveOk=true; ln('✅ 2. 실시간 조회 작동 — <b>현재 접속자 '+(lr.data.live_total||0)+'명</b>'); }
+    }catch(e){ ln('❌ 2. 실시간 조회 예외: '+e); }
+    // 3) 신호 함수 (admin에서 직접 테스트 신호 1개 전송)
+    var hbOk=false;
+    try{
+      var tid='diag_'+Date.now();
+      var hr=await s.rpc('cgo_heartbeat',{p_sid:tid,p_lat:35.8,p_lng:127.1});
+      if(hr.error){ ln('❌ 3. 신호 함수 오류: '+hr.error.message+'  <span style="color:#f87171">← 실시간이 안 되는 원인</span>'); }
+      else {
+        hbOk=true; ln('✅ 3. 신호 함수 작동 (테스트 신호 1개 전송)');
+        var lr2=await s.rpc('get_live_stats');
+        if(lr2&&lr2.data){ ln('&nbsp;&nbsp;&nbsp;→ 신호 직후 접속자: <b>'+(lr2.data.live_total||0)+'명</b> (1 이상이면 신호 정상 도착)'); }
+      }
+    }catch(e){ ln('❌ 3. 신호 함수 예외: '+e); }
+    // 4) 지역 함수
+    try{
+      var rr=await s.rpc('get_region_stats');
+      if(rr.error){ ln('❌ 4. 지역 함수 오류: '+rr.error.message); }
+      else { ln('✅ 4. 지역 함수 작동 — 누적 지역 '+((rr.data||[]).length)+'곳'); }
+    }catch(e){ ln('❌ 4. 지역 함수 예외: '+e); }
+    // 결론
+    ln('<br><b>📌 결론:</b>');
+    if(hbOk && liveOk){
+      ln('• 서버 함수는 <b style="color:#34d399">모두 정상</b>입니다.');
+      ln('• 위 3번에서 접속자가 1로 늘었다면 → 서버는 완벽. 실시간이 0이었던 건 <b>메인앱이 신호를 안 보내서</b>예요 (메인앱 최신 배포 필요).');
+      ln('• 메인앱 배포가 맞다면 → 휴대폰에서 c-go-fuli.com 열고 20초 뒤 이 진단 다시 실행 시 접속자가 늘어야 정상.');
+    } else if(!hbOk){
+      ln('• <b style="color:#f87171">신호 함수(3번)가 막혀</b> 있어요. realtime_setup.sql 을 다시 실행하면 해결됩니다.');
+    } else {
+      ln('• 일부 함수 오류 — 위 빨간 줄을 캡처해 알려주세요.');
+    }
+    if(btn){btn.disabled=false;btn.textContent='▶ 진단 실행';}
+  }
+  function init(){ var b=document.getElementById('diagRunBtn'); if(b) b.addEventListener('click',run); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
 })();
 </script>
 </body>
